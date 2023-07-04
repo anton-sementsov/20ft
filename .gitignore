@@ -1,0 +1,6 @@
+node_modules/
+.next/
+
+# very important
+/**/.env*.local
+/**/.env
