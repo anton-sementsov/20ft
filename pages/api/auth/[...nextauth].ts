@@ -3,11 +3,9 @@ import NextAuth, { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 // import GitHubProvider from "next-auth/providers/github";
 // import EmailProvider from "next-auth/providers/email";
+import { compare } from 'bcryptjs';
 import prisma from '../../../lib/prisma';
 import Credentials from 'next-auth/providers/credentials';
-
-const authHandler: NextApiHandler = (req, res) => NextAuth(req, res, options);
-export default authHandler;
 
 const options: NextAuthOptions = {
   providers: [
@@ -25,11 +23,18 @@ const options: NextAuthOptions = {
         },
       },
       async authorize(credentials, req) {
+        const { email } = credentials;
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
         });
-        // check pass too
-        return user || null;
+
+        const checkPassword = await compare(
+          credentials.password,
+          user.password
+        );
+
+        return (checkPassword && user) || null;
       },
     }),
     // GitHubProvider({
@@ -49,8 +54,29 @@ const options: NextAuthOptions = {
     // }),
   ],
   session: {
-    maxAge: 1 * 60 * 60, // 1 hour
+    maxAge: 24 * 60 * 60, //24 hours
+    strategy: 'jwt',
+  },
+  callbacks: {
+    async jwt({ token, account }) {
+      // Persist the OAuth access_token to the token right after signin
+      console.log('jwt');
+      if (account) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
+    async session({ session, token, user }) {
+      // Send properties to the client, like an access_token from a provider.
+      console.log('session callback');
+      session.accessToken = token.accessToken;
+      return session;
+    },
   },
   adapter: PrismaAdapter(prisma),
   secret: process.env.SECRET,
+  debug: true,
 };
+
+const authHandler: NextApiHandler = (req, res) => NextAuth(req, res, options);
+export default authHandler;

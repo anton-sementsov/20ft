@@ -1,0 +1,8 @@
+// migrate db
+npx prisma migrate dev
+
+http://localhost:3000/create
+//credentials
+admin@admin.20ft
+kokoroko
+$2a$10$XzJ/4.YHkg4lhtqUZjL9zOF3OYMevofu7okL/fDqiDpH7ahJy0kMu
